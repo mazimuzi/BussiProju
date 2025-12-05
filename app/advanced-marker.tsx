@@ -2,6 +2,7 @@
 
 import { AdvancedMarker, InfoWindow } from '@vis.gl/react-google-maps';
 import { useState } from 'react';
+import { Pin } from './pin';
 
 interface Location {
     id: string;
@@ -18,13 +19,24 @@ interface AdvancedMarkerComponentProps {
 
 export function AdvancedMarkerComponent({ location, index }: AdvancedMarkerComponentProps) {
     const [infoWindowOpen, setInfoWindowOpen] = useState(false);
+    const [hovered, setHovered] = useState(false);
 
     return (
         <AdvancedMarker
             position={{ lat: location.latitude, lng: location.longitude }}
             title={location.title || `Location ${index}`}
             onClick={() => setInfoWindowOpen(true)}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
         >
+            <Pin
+                background="#3366FF"
+                scale={hovered ? 1.15 : 1}
+                borderColor="white"
+                glyph={`${index + 1}`}
+                glyphColor="white"
+            />
+
             {infoWindowOpen && (
                 <InfoWindow onCloseClick={() => setInfoWindowOpen(false)}>
                     <div className="p-2">
