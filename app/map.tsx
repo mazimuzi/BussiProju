@@ -37,22 +37,22 @@ const MapComponent = () => {
                 id: '1',
                 latitude: 60.1699,
                 longitude: 24.9384,
-                title: 'Helsinki Center',
-                description: 'Bus stop at Helsinki center'
+                title: 'Pysäkki1',
+                description: 'Bus stop at Pysäkki1'
             },
             {
                 id: '2',
                 latitude: 60.1760,
                 longitude: 24.9496,
-                title: 'Kamppi',
-                description: 'Bus stop at Kamppi'
+                title: 'Pysäkki2',
+                description: 'Bus stop at Pysäkki2'
             },
             {
                 id: '3',
                 latitude: 60.1820,
                 longitude: 24.9352,
-                title: 'Itäkeskus',
-                description: 'Bus stop at Itäkeskus'
+                title: 'Pysäkki3',
+                description: 'Bus stop at Pysäkki3'
             }
         ]);
     }, []);
