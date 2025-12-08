@@ -15,7 +15,7 @@ export default function Home() {
 
         {/* Hakunappi tms. – myöhemmin oikea toiminnallisuus */}
         <button className="mb-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition">
-          Hae sijainti
+          Hakunappi, myöhemmin toiminnallisuus 
         </button>
 
         {/* Lista (placeholder toistaiseksi) */}
@@ -25,7 +25,7 @@ export default function Home() {
               <span className="text-lg font-bold text-blue-600">550</span>
               <span className="text-sm font-semibold text-gray-700">3 min</span>
             </div>
-            <p className="text-sm text-gray-500">Itäkeskus</p>
+            <p className="text-sm text-gray-500">Pysäkki1</p>
           </div>
 
           <div className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
@@ -33,7 +33,7 @@ export default function Home() {
               <span className="text-lg font-bold text-blue-600">56</span>
               <span className="text-sm font-semibold text-gray-700">7 min</span>
             </div>
-            <p className="text-sm text-gray-500">Keskusta</p>
+            <p className="text-sm text-gray-500">Pysäkki2</p>
           </div>
 
           {/* Lisää myöhemmin oikeat datakortit tähän */}
@@ -50,7 +50,7 @@ export default function Home() {
         <div className="pointer-events-none absolute left-4 top-4 z-10">
           <div className="pointer-events-auto rounded-xl bg-white/90 px-4 py-2 shadow">
             <p className="text-sm font-medium text-gray-700">
-              Kartta näyttää sijaintisi ja lähimmän pysäkin.
+             
             </p>
           </div>
         </div>
