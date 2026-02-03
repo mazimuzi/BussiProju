@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const DIGITRANSIT_API_URL = "https://api.digitransit.fi/routing/v2/hsl/gtfs/v1";
+// Koko Suomen joukkoliikenne (Waltti + muut)
+// HSL: https://api.digitransit.fi/routing/v2/hsl/gtfs/v1
+// Waltti (muu Suomi): https://api.digitransit.fi/routing/v2/waltti/gtfs/v1
+// Koko Suomi: https://api.digitransit.fi/routing/v2/finland/gtfs/v1
+
+const DIGITRANSIT_API_URL = "https://api.digitransit.fi/routing/v2/finland/gtfs/v1";
 const API_KEY = process.env.NEXT_PUBLIC_DIGITRANSIT_API_KEY;
 
 export async function POST(request: NextRequest) {
@@ -21,20 +26,16 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify(body),
     });
 
-    // Lue vastaus tekstinä ensin
     const responseText = await response.text();
-    
-    console.log("Digitransit status:", response.status);
-    console.log("Digitransit response:", responseText.substring(0, 500));
 
     if (!response.ok) {
+      console.error("Digitransit error:", response.status, responseText);
       return NextResponse.json(
         { error: `Digitransit API error: ${response.status}`, details: responseText },
         { status: response.status }
       );
     }
 
-    // Parsi JSON vasta kun tiedämme että vastaus on ok
     try {
       const data = JSON.parse(responseText);
       return NextResponse.json(data);

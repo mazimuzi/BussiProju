@@ -5,17 +5,19 @@ import { MapProvider } from "./map-provider";
 import { MapComponent } from "./map";
 import { useNearbyStops } from "@/lib/hooks";
 import { useStopTimetable } from "@/lib/hooks";
+import { useGeolocation } from "@/lib/hooks";
 import { minutesUntilDeparture, NearbyStop } from "@/lib/digitransit";
 
 // Helsinki keskusta oletussijainti - myöhemmin GPS
-const DEFAULT_LOCATION = {
-  lat: 60.1699,
-  lon: 24.9384,
-};
 
 export default function Home() {
   const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
-  const [location] = useState(DEFAULT_LOCATION);
+  const {
+  location,
+  loading: locationLoading,
+  error: locationError,
+  refetch: refetchLocation,
+} = useGeolocation();
 
   // Hae lähimmät pysäkit Digitransit API:sta
   const {
@@ -23,9 +25,10 @@ export default function Home() {
     loading: stopsLoading,
     error: stopsError,
   } = useNearbyStops({
-    lat: location.lat,
-    lon: location.lon,
+    lat: location?.lat ?? 0,
+    lon: location?.lon ?? 0,
     radius: 500,
+    enabled: !!location,
   });
 
   // Hae valitun pysäkin aikataulu
@@ -61,8 +64,9 @@ export default function Home() {
             ← Takaisin pysäkkilistaan
           </button>
         ) : (
-          <button className="mb-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition">
-            Hakunappi, myöhemmin toiminnallisuus
+          <button onClick={refetchLocation}
+           className="mb-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition">
+            Päivitä sijainti
           </button>
         )}
 
