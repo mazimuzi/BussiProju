@@ -1,10 +1,8 @@
 // Digitransit GraphQL Client
-// Dokumentaatio: https://digitransit.fi/en/developers/apis/1-routing-api/
+// Käyttää Next.js API route:a CORS-ongelman välttämiseksi
 
-const DIGITRANSIT_API_URL = "https://api.digitransit.fi/routing/v1/routers/hsl/index/graphql";
-
-const API_KEY = process.env.NEXT_PUBLIC_DIGITRANSIT_API_KEY;
-console.log("API KEY:", API_KEY); // LISÄÄ TÄMÄ
+// Käytä omaa API route:a, ei suoraan Digitransitin API:a
+const API_URL = "/api/digitransit";
 
 interface GraphQLResponse<T> {
   data?: T;
@@ -12,17 +10,11 @@ interface GraphQLResponse<T> {
 }
 
 export async function digitransitQuery<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-  
- if (API_KEY) {
-    headers["digitransit-subscription-key"] = API_KEY;
-  }
-
-  const response = await fetch(DIGITRANSIT_API_URL, {
+  const response = await fetch(API_URL, {
     method: "POST",
-    headers,
+    headers: {
+      "Content-Type": "application/json",
+    },
     body: JSON.stringify({
       query,
       variables,
@@ -30,7 +22,7 @@ export async function digitransitQuery<T>(query: string, variables?: Record<stri
   });
 
   if (!response.ok) {
-    throw new Error(`Digitransit API error: ${response.status}`);
+    throw new Error(`API error: ${response.status}`);
   }
 
   const json: GraphQLResponse<T> = await response.json();
@@ -40,7 +32,7 @@ export async function digitransitQuery<T>(query: string, variables?: Record<stri
   }
 
   if (!json.data) {
-    throw new Error("No data returned from Digitransit API");
+    throw new Error("No data returned from API");
   }
 
   return json.data;
@@ -123,19 +115,19 @@ export interface NearbyStopsResponse {
 }
 
 export interface Departure {
-  scheduledArrival: number; // sekunteja keskiyöstä
+  scheduledArrival: number;
   realtimeArrival: number;
-  arrivalDelay: number; // myöhästyminen sekunteina
-  realtime: boolean; // onko reaaliaikainen tieto
-  serviceDay: number; // päivämäärä Unix-aikana
+  arrivalDelay: number;
+  realtime: boolean;
+  serviceDay: number;
   trip: {
     route: {
-      shortName: string; // esim. "550"
-      longName: string;  // esim. "Itäkeskus-Westendinasema"
-      mode: string;      // BUS, TRAM, RAIL, etc.
+      shortName: string;
+      longName: string;
+      mode: string;
     };
   };
-  headsign: string; // määränpää
+  headsign: string;
 }
 
 export interface StopTimetableResponse {
@@ -152,7 +144,6 @@ export interface StopTimetableResponse {
 // APUFUNKTIOT
 // ============================================
 
-// Muunna sekunnit keskiyöstä -> "HH:MM" muotoon
 export function formatTime(secondsFromMidnight: number, serviceDay: number): string {
   const date = new Date((serviceDay + secondsFromMidnight) * 1000);
   return date.toLocaleTimeString("fi-FI", {
@@ -161,14 +152,12 @@ export function formatTime(secondsFromMidnight: number, serviceDay: number): str
   });
 }
 
-// Laske kuinka monta minuuttia lähtöön
 export function minutesUntilDeparture(realtimeArrival: number, serviceDay: number): number {
   const departureTime = (serviceDay + realtimeArrival) * 1000;
   const now = Date.now();
   return Math.round((departureTime - now) / 60000);
 }
 
-// Muunna mode suomeksi
 export function getModeInFinnish(mode: string): string {
   const modes: Record<string, string> = {
     BUS: "Bussi",
