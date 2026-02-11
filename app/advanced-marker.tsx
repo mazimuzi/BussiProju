@@ -10,30 +10,47 @@ interface Location {
     longitude: number;
     title?: string;
     description?: string;
+    isUserLocation?: boolean;
+    isSelected?: boolean;
 }
 
 interface AdvancedMarkerComponentProps {
     location: Location;
     index: number;
+    onClick?: () => void;
 }
 
-export function AdvancedMarkerComponent({ location, index }: AdvancedMarkerComponentProps) {
+export function AdvancedMarkerComponent({ location, index, onClick }: 
+    AdvancedMarkerComponentProps) {
     const [infoWindowOpen, setInfoWindowOpen] = useState(false);
     const [hovered, setHovered] = useState(false);
+
+    //Värit: vihreä = käyttäjä, punainen = valittu, sininen = normaali
+    let background = "#3366FF";
+    if (location.isUserLocation) {
+        background = "#34A853";
+    } else if (location.isSelected) {
+        background = "#EA4335";
+    }
+
+    const handleClick = () => {
+        setInfoWindowOpen(true);
+        onClick?.();
+    };
 
     return (
         <AdvancedMarker
             position={{ lat: location.latitude, lng: location.longitude }}
             title={location.title || `Location ${index}`}
-            onClick={() => setInfoWindowOpen(true)}
+            onClick={handleClick}
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
         >
             <Pin
-                background="#3366FF"
+                background={background}
                 scale={hovered ? 1.15 : 1}
                 borderColor="white"
-                glyph={`${index + 1}`}
+                glyph={ location.isUserLocation ? "📍" : `${index + 1}`}
                 glyphColor="white"
             />
 

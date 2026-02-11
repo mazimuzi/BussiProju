@@ -7,14 +7,14 @@ we need to make this component client rendered as well else error occurs
 import { APIProvider, Map } from '@vis.gl/react-google-maps';
 import { AdvancedMarkerComponent } from './advanced-marker';
 import { useState, useEffect } from 'react';
+import { NearbyStop } from '@/lib/digitransit';
 
 // Sample location data - replace with your actual data
-interface Location {
-    id: string;
-    latitude: number;
-    longitude: number;
-    title?: string;
-    description?: string;
+interface MapComponentProps {
+    stops?: NearbyStop[];
+    userLocation?: { lat: number; lon: number } | null;
+    onStopClick?: (stopId: string) => void;
+    selectedStopId?: string | null;
 }
 
 const defaultMapCenter = {
@@ -26,56 +26,62 @@ const defaultMapZoom = 13;
 
 
 
-const MapComponent = () => {
-    const [myLocations, setMyLocations] = useState<Location[]>([]);
-
-    // Load locations on component mount
-    useEffect(() => {
-        // TODO: Replace with your actual data source (API, context, props, etc.)
-        setMyLocations([
-            {
-                id: '1',
-                latitude: 60.1699,
-                longitude: 24.9384,
-                title: 'Pysäkki1',
-                description: 'Bus stop at Pysäkki1'
-            },
-            {
-                id: '2',
-                latitude: 60.1760,
-                longitude: 24.9496,
-                title: 'Pysäkki2',
-                description: 'Bus stop at Pysäkki2'
-            },
-            {
-                id: '3',
-                latitude: 60.1820,
-                longitude: 24.9352,
-                title: 'Pysäkki3',
-                description: 'Bus stop at Pysäkki3'
-            }
-        ]);
-    }, []);
+const MapComponent = ({ 
+    stops = [], 
+    userLocation, 
+    onStopClick,
+    selectedStopId 
+}: MapComponentProps) => {
+    
+    // Käytä käyttäjän sijaintia kartan keskipisteenä jos saatavilla
+    const mapCenter = userLocation 
+        ? { lat: userLocation.lat, lng: userLocation.lon }
+        : defaultMapCenter;
 
     return (
         <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY as string}>
             <Map
-                defaultCenter={defaultMapCenter}
+                defaultCenter={mapCenter}
+                center={mapCenter}
                 defaultZoom={defaultMapZoom}
                 className="w-full h-screen"
                 mapId="DEMO_MAP_ID"
                 reuseMaps={true}
             >
-                {myLocations && myLocations.map((location, index) => {
-                    let lat = location.latitude;
-                    let lng = location.longitude;
-                    if (!lat || !lng) return null;
+                {/* Käyttäjän sijainti */}
+                {userLocation && (
+                    <AdvancedMarkerComponent
+                        key="user-location"
+                        index={-1}
+                        location={{
+                            id: 'user',
+                            latitude: userLocation.lat,
+                            longitude: userLocation.lon,
+                            title: 'Sijaintisi',
+                            description: 'Olet tässä',
+                            isUserLocation: true
+                        }}
+                    />
+                )}
+
+                {/* Pysäkit */}
+                {stops.map((nearbyStop, index) => {
+                    const { stop } = nearbyStop;
+                    if (!stop.lat || !stop.lon) return null;
 
                     return (
                         <AdvancedMarkerComponent
-                            key={`${location.id}`}
+                            key={stop.gtfsId}
                             index={index}
-                            location={location}
+                            location={{
+                                id: stop.gtfsId,
+                                latitude: stop.lat,
+                                longitude: stop.lon,
+                                title: stop.name,
+                                description: `${Math.round(nearbyStop.distance)} m päässä`,
+                                isSelected: stop.gtfsId === selectedStopId
+                            }}
+                            onClick={() => onStopClick?.(stop.gtfsId)}
                         />
                     );
                 })}

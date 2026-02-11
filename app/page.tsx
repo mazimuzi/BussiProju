@@ -6,29 +6,47 @@ import { MapComponent } from "./map";
 import { useNearbyStops } from "@/lib/hooks";
 import { useStopTimetable } from "@/lib/hooks";
 import { useGeolocation } from "@/lib/hooks";
-import { minutesUntilDeparture, NearbyStop } from "@/lib/digitransit";
-
-// Helsinki keskusta oletussijainti - myöhemmin GPS
+import { useSearchStops } from "@/lib/hooks";
+import { minutesUntilDeparture, getCityFromGtfsId, NearbyStop, Stop } from "@/lib/digitransit";
 
 export default function Home() {
   const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
-  const {
-  location,
-  loading: locationLoading,
-  error: locationError,
-  refetch: refetchLocation,
-} = useGeolocation();
+  const[searchQuery, setSearchQuery] = useState("");
+  const [isSearchMode, setIsSearchMode] = useState(false);
+  
+  // "Virtuaalinen" sijainti - joko GPS tai haetun pysäkin sijainti
+  const [virtualLocation, setVirtualLocation] = useState<{ lat: number; lon: number } | null>(null);
 
-  // Hae lähimmät pysäkit Digitransit API:sta
+  // Hae käyttäjän GPS-sijainti
+  const {
+    location: gpsLocation,
+    loading: locationLoading,
+    error: locationError,
+    refetch: refetchLocation,
+  } = useGeolocation();
+
+  // Hakutoiminto
+  const {
+    results: searchResults,
+    loading: searchLoading,
+    error: searchError,
+    search,
+    clear: clearSearch,
+  } = useSearchStops();
+
+  // Käytä virtuaalista sijaintia jos asetettu, muuten GPS
+  const activeLocation = virtualLocation || gpsLocation;
+
+  // Hae lähimmät pysäkit aktiivisen sijainnin perusteella
   const {
     stops,
     loading: stopsLoading,
     error: stopsError,
   } = useNearbyStops({
-    lat: location?.lat ?? 0,
-    lon: location?.lon ?? 0,
+    lat: activeLocation?.lat ?? 0,
+    lon: activeLocation?.lon ?? 0,
     radius: 500,
-    enabled: !!location,
+    enabled: !!activeLocation,
   });
 
   // Hae valitun pysäkin aikataulu
@@ -42,6 +60,55 @@ export default function Home() {
     refreshInterval: 30000,
   });
 
+  const isLoading = locationLoading || stopsLoading;
+
+  // Käsittele pysäkin klikkaus
+  const handleStopClick = (stopId: string) => {
+    setSelectedStopId(stopId);
+    setIsSearchMode(false);
+    clearSearch();
+    setSearchQuery("");
+  };
+
+  // Käsittele hakutuloksen valinta - siirry pysäkin sijaintiin
+  const handleSearchResultClick = (stop: Stop) => {
+    setVirtualLocation({ lat: stop.lat, lon: stop.lon });
+    setSelectedStopId(stop.gtfsId);
+    setIsSearchMode(false);
+    clearSearch();
+    setSearchQuery("");
+  };
+
+  // Palaa omaan sijaintiin
+  const handleReturnToMyLocation = () => {
+    setVirtualLocation(null);
+    setSelectedStopId(null);
+    setIsSearchMode(false);
+    clearSearch();
+    setSearchQuery("");
+  };
+
+  // Käsittele haku
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.length >= 2) {
+      search(searchQuery);
+      setIsSearchMode(true);
+    }
+  };
+
+  // Käsittele hakukentän muutos
+  const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+    if (e.target.value.length >= 2) {
+      search(e.target.value);
+      setIsSearchMode(true);
+    } else {
+      clearSearch();
+      setIsSearchMode(false);
+    }
+  };
+
   return (
     <div className="flex h-screen flex-col md:flex-row bg-background text-foreground">
       {/* SIDEBAR */}
@@ -51,42 +118,131 @@ export default function Home() {
           <p className="text-sm text-gray-500">
             {selectedStopId && stopName
               ? `Pysäkki: ${stopName}`
-              : "Valitse pysäkki nähdäksesi aikataulun"}
+              : virtualLocation
+              ? "Haettu sijainti"
+              : locationLoading
+              ? "Haetaan sijaintia..."
+              : "Hae pysäkkiä tai valitse listasta"}
           </p>
         </header>
 
+        {/* HAKUKENTTÄ */}
+        <form onSubmit={handleSearch} className="mb-4">
+          <div className="relative">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={handleSearchInputChange}
+              placeholder="Hae pysäkkiä nimellä..."
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery("");
+                  clearSearch();
+                  setIsSearchMode(false);
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        </form>
+
+        {/* Sijaintivirhe */}
+        {locationError && !virtualLocation && (
+          <div className="mb-4 p-2 bg-yellow-100 border border-yellow-300 rounded-lg">
+            <p className="text-sm text-yellow-800">{locationError}</p>
+          </div>
+        )}
+
+        {/* Palaa omaan sijaintiin -nappi */}
+        {virtualLocation && (
+          <button
+            onClick={handleReturnToMyLocation}
+            className="mb-4 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition"
+          >
+            Palaa omaan sijaintiin
+          </button>
+        )}
+
         {/* Takaisin-nappi kun pysäkki on valittu */}
-        {selectedStopId ? (
+        {selectedStopId && !isSearchMode ? (
           <button
             onClick={() => setSelectedStopId(null)}
             className="mb-4 rounded-lg bg-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-300 transition"
           >
             ← Takaisin pysäkkilistaan
           </button>
-        ) : (
-          <button onClick={refetchLocation}
-           className="mb-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition">
+        ) : !isSearchMode && !virtualLocation && (
+          <button
+            onClick={refetchLocation}
+            className="mb-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition"
+          >
             Päivitä sijainti
           </button>
         )}
 
-        {/* SISÄLTÖ: Joko pysäkkilista tai aikataulu */}
+        {/* SISÄLTÖ */}
         <div className="flex-1 overflow-y-auto space-y-3">
           {/* Ladataan... */}
-          {(stopsLoading || timetableLoading) && (
-            <p className="text-sm text-gray-500">Ladataan...</p>
+          {(isLoading || searchLoading) && (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <span className="ml-2 text-sm text-gray-500">
+                {searchLoading ? "Haetaan..." : locationLoading ? "Haetaan sijaintia..." : "Ladataan pysäkkejä..."}
+              </span>
+            </div>
+          )}
+
+          {/* Hakuvirhe */}
+          {searchError && (
+            <p className="text-sm text-red-500">Virhe: {searchError}</p>
+          )}
+
+          {/* HAKUTULOKSET */}
+          {isSearchMode && !searchLoading && searchResults.length > 0 && (
+            <>
+              <p className="text-sm text-gray-500 font-medium">
+                Hakutulokset ({searchResults.length})
+              </p>
+              {searchResults.slice(0, 20).map((stop: Stop) => (
+                <button
+                  key={stop.gtfsId}
+                  onClick={() => handleSearchResultClick(stop)}
+                  className="w-full text-left rounded-xl border border-gray-200 bg-white p-3 shadow-sm hover:bg-blue-50 transition"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-lg font-bold text-blue-600">
+                      {stop.name}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-500">
+                    {getCityFromGtfsId(stop.gtfsId)} • {stop.vehicleMode || "BUS"}
+                  </p>
+                </button>
+              ))}
+            </>
+          )}
+
+          {/* Ei hakutuloksia */}
+          {isSearchMode && !searchLoading && searchResults.length === 0 && searchQuery.length >= 2 && (
+            <p className="text-sm text-gray-500">Ei hakutuloksia haulle "{searchQuery}"</p>
           )}
 
           {/* Virhe */}
-          {stopsError && (
+          {stopsError && !isSearchMode && (
             <p className="text-sm text-red-500">Virhe: {stopsError}</p>
           )}
 
-          {/* PYSÄKKILISTA (kun ei ole valittu pysäkkiä) */}
-          {!selectedStopId && !stopsLoading && stops.map((nearbyStop: NearbyStop) => (
+          {/* PYSÄKKILISTA */}
+          {!selectedStopId && !isSearchMode && !isLoading && stops.map((nearbyStop: NearbyStop) => (
             <button
               key={nearbyStop.stop.gtfsId}
-              onClick={() => setSelectedStopId(nearbyStop.stop.gtfsId)}
+              onClick={() => handleStopClick(nearbyStop.stop.gtfsId)}
               className="w-full text-left rounded-xl border border-gray-200 bg-white p-3 shadow-sm hover:bg-gray-50 transition"
             >
               <div className="flex items-center justify-between">
@@ -103,8 +259,15 @@ export default function Home() {
             </button>
           ))}
 
-          {/* AIKATAULU (kun pysäkki on valittu) */}
-          {selectedStopId && !timetableLoading && departures.map((departure, index) => {
+          {/* AIKATAULU */}
+          {selectedStopId && !isSearchMode && timetableLoading && (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <span className="ml-2 text-sm text-gray-500">Ladataan aikataulua...</span>
+            </div>
+          )}
+
+          {selectedStopId && !isSearchMode && !timetableLoading && departures.map((departure, index) => {
             const minutes = minutesUntilDeparture(
               departure.realtimeArrival,
               departure.serviceDay
@@ -132,13 +295,13 @@ export default function Home() {
           })}
 
           {/* Ei lähtöjä */}
-          {selectedStopId && !timetableLoading && departures.length === 0 && (
+          {selectedStopId && !isSearchMode && !timetableLoading && departures.length === 0 && (
             <p className="text-sm text-gray-500">Ei tulevia lähtöjä</p>
           )}
 
           {/* Ei pysäkkejä */}
-          {!selectedStopId && !stopsLoading && stops.length === 0 && (
-            <p className="text-sm text-gray-500">Ei pysäkkejä lähellä</p>
+          {!selectedStopId && !isSearchMode && !isLoading && stops.length === 0 && (
+            <p className="text-sm text-gray-500">Ei pysäkkejä lähellä (500m säteellä)</p>
           )}
         </div>
       </aside>
@@ -146,7 +309,12 @@ export default function Home() {
       {/* KARTTA-ALUE */}
       <main className="flex-1 relative">
         <MapProvider>
-          <MapComponent />
+          <MapComponent 
+            stops={stops}
+            userLocation={activeLocation}
+            onStopClick={handleStopClick}
+            selectedStopId={selectedStopId}
+          />
         </MapProvider>
       </main>
     </div>

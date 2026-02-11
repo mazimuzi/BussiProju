@@ -1,7 +1,6 @@
 // Digitransit GraphQL Client
 // Käyttää Next.js API route:a CORS-ongelman välttämiseksi
 
-// Käytä omaa API route:a, ei suoraan Digitransitin API:a
 const API_URL = "/api/digitransit";
 
 interface GraphQLResponse<T> {
@@ -62,6 +61,23 @@ export const NEARBY_STOPS_QUERY = `
   }
 `;
 
+//Hae pysäkit nimellä
+export const SEARCH_STOPS_QUERY = `
+  query SearchStops($name: String!) {
+    stops(name: $name) {
+      gtfsId
+      name
+      lat
+      lon
+      vehicleMode
+      zoneId
+      parentStation {
+        name
+      }
+    }
+  }
+`;
+
 // Hae pysäkin aikataulut
 export const STOP_TIMETABLE_QUERY = `
   query StopTimetable($stopId: String!, $numberOfDepartures: Int!) {
@@ -99,6 +115,10 @@ export interface Stop {
   lat: number;
   lon: number;
   vehicleMode?: string;
+  zoneId?: string;
+  parentStation?: {
+    name: string;
+  };
 }
 
 export interface NearbyStop {
@@ -112,6 +132,10 @@ export interface NearbyStopsResponse {
       node: NearbyStop;
     }>;
   };
+}
+
+export interface SearchStopsResponse {
+  stops: Stop[];
 }
 
 export interface Departure {
@@ -167,4 +191,31 @@ export function getModeInFinnish(mode: string): string {
     FERRY: "Lautta",
   };
   return modes[mode] || mode;
+}
+
+//Pura kaupunki gtfsId:stä (esim. "LINKKI:123" -> "Jyväskylä")
+export function getCityFromGtfsId(gtfsId: string): string {
+  const prefix = gtfsId.split(":")[0];
+  const cities: Record<string, string> = {
+    "HSL": "Helsinki",
+    "LINKKI": "Jyväskylä",
+    "tampere": "Tampere",
+    "OULU": "Oulu",
+    "Kuopio": "Kuopio",
+    "LAHTI": "Lahti",
+    "Lappeenranta": "Lappeenranta",
+    "Joensuu": "Joensuu",
+    "Turku": "Turku",
+    "Vaasa": "Vaasa",
+    "Kotka": "Kotka",
+    "Kouvola": "Kouvola",
+    "Mikkeli": "Mikkeli",
+    "Pori": "Pori",
+    "Rovaniemi": "Rovaniemi",
+    "Kajaani": "Kajaani",
+    "WALTTI": "Waltti-alue",
+    "digitraffic": "VR Junat",
+    "matkahuolto": "Matkahuolto",
+  };
+  return cities[prefix] || prefix;
 }
