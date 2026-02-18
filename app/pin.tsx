@@ -13,7 +13,7 @@ interface PinProps {
 
 export function Pin({ background = '#3366FF', scale = 1, borderColor = 'white', glyph, glyphColor = 'white', size = 40 }: PinProps) {
     const isImage = typeof glyph === 'string' && (glyph.startsWith('http') || glyph.startsWith('/'));
-    const glyphUrl = typeof glyph === 'string' ? glyph : glyph instanceof URL ? glyph.href : undefined;
+    const glyphUrl = isImage && typeof glyph === 'string' ? glyph : glyph instanceof URL ? glyph.href : undefined;
 
     const wrapperStyle: React.CSSProperties = {
         display: 'inline-flex',

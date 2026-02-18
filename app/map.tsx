@@ -7,7 +7,7 @@ we need to make this component client rendered as well else error occurs
 import { APIProvider, Map } from '@vis.gl/react-google-maps';
 import { AdvancedMarkerComponent } from './advanced-marker';
 import { useState, useEffect } from 'react';
-import { NearbyStop } from '@/lib/digitransit';
+import { NearbyStop, getTransportModeEmoji } from '@/lib/digitransit';
 
 // Sample location data - replace with your actual data
 interface MapComponentProps {
@@ -26,15 +26,15 @@ const defaultMapZoom = 13;
 
 
 
-const MapComponent = ({ 
-    stops = [], 
-    userLocation, 
+const MapComponent = ({
+    stops = [],
+    userLocation,
     onStopClick,
-    selectedStopId 
+    selectedStopId
 }: MapComponentProps) => {
-    
+
     // Käytä käyttäjän sijaintia kartan keskipisteenä jos saatavilla
-    const mapCenter = userLocation 
+    const mapCenter = userLocation
         ? { lat: userLocation.lat, lng: userLocation.lon }
         : defaultMapCenter;
 
@@ -79,7 +79,8 @@ const MapComponent = ({
                                 longitude: stop.lon,
                                 title: stop.name,
                                 description: `${Math.round(nearbyStop.distance)} m päässä`,
-                                isSelected: stop.gtfsId === selectedStopId
+                                isSelected: stop.gtfsId === selectedStopId,
+                                transportEmoji: getTransportModeEmoji(stop.vehicleMode)
                             }}
                             onClick={() => onStopClick?.(stop.gtfsId)}
                         />

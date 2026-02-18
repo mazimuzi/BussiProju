@@ -12,6 +12,8 @@ interface Location {
     description?: string;
     isUserLocation?: boolean;
     isSelected?: boolean;
+    vehicleMode?: string;
+    transportEmoji?: string;
 }
 
 interface AdvancedMarkerComponentProps {
@@ -20,7 +22,7 @@ interface AdvancedMarkerComponentProps {
     onClick?: () => void;
 }
 
-export function AdvancedMarkerComponent({ location, index, onClick }: 
+export function AdvancedMarkerComponent({ location, index, onClick }:
     AdvancedMarkerComponentProps) {
     const [infoWindowOpen, setInfoWindowOpen] = useState(false);
     const [hovered, setHovered] = useState(false);
@@ -50,7 +52,7 @@ export function AdvancedMarkerComponent({ location, index, onClick }:
                 background={background}
                 scale={hovered ? 1.15 : 1}
                 borderColor="white"
-                glyph={ location.isUserLocation ? "📍" : `${index + 1}`}
+                glyph={location.isUserLocation ? "📍" : location.transportEmoji || "📍"}
                 glyphColor="white"
             />
 

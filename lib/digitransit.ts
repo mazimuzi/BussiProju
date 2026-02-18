@@ -193,6 +193,19 @@ export function getModeInFinnish(mode: string): string {
   return modes[mode] || mode;
 }
 
+export function getTransportModeEmoji(mode?: string): string {
+  if (!mode) return "📍";
+  const emojis: Record<string, string> = {
+    BUS: "🚌",
+    TRAM: "🚊",
+    RAIL: "🚂",
+    SUBWAY: "🚇",
+    METRO: "🚇",
+    FERRY: "⛴️",
+  };
+  return emojis[mode.toUpperCase()] || "📍";
+}
+
 //Pura kaupunki gtfsId:stä (esim. "LINKKI:123" -> "Jyväskylä")
 export function getCityFromGtfsId(gtfsId: string): string {
   const prefix = gtfsId.split(":")[0];
