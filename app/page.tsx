@@ -7,7 +7,8 @@ import { useNearbyStops } from "@/lib/hooks";
 import { useStopTimetable } from "@/lib/hooks";
 import { useGeolocation } from "@/lib/hooks";
 import { useSearchStops } from "@/lib/hooks";
-import { minutesUntilDeparture, getCityFromGtfsId, NearbyStop, Stop } from "@/lib/digitransit";
+import { minutesUntilDeparture, getCityFromGtfsId } from "@/lib/digitransit";
+import type { NearbyStop, Stop } from "@/lib/digitransit";
 
 export default function Home() {
   const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
@@ -162,6 +163,7 @@ export default function Home() {
         {/* Palaa omaan sijaintiin -nappi */}
         {virtualLocation && (
           <button
+            type="button"
             onClick={handleReturnToMyLocation}
             className="mb-4 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition"
           >
@@ -172,6 +174,7 @@ export default function Home() {
         {/* Takaisin-nappi kun pysäkki on valittu */}
         {selectedStopId && !isSearchMode ? (
           <button
+            type="button"
             onClick={() => setSelectedStopId(null)}
             className="mb-4 rounded-lg bg-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-300 transition"
           >
@@ -179,6 +182,7 @@ export default function Home() {
           </button>
         ) : !isSearchMode && !virtualLocation && (
           <button
+            type="button"
             onClick={refetchLocation}
             className="mb-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition"
           >
@@ -211,6 +215,7 @@ export default function Home() {
               </p>
               {searchResults.slice(0, 20).map((stop: Stop) => (
                 <button
+                  type="button"
                   key={stop.gtfsId}
                   onClick={() => handleSearchResultClick(stop)}
                   className="w-full text-left rounded-xl border border-gray-200 bg-white p-3 shadow-sm hover:bg-blue-50 transition"
@@ -241,6 +246,7 @@ export default function Home() {
           {/* PYSÄKKILISTA */}
           {!selectedStopId && !isSearchMode && !isLoading && stops.map((nearbyStop: NearbyStop) => (
             <button
+              type="button"
               key={nearbyStop.stop.gtfsId}
               onClick={() => handleStopClick(nearbyStop.stop.gtfsId)}
               className="w-full text-left rounded-xl border border-gray-200 bg-white p-3 shadow-sm hover:bg-gray-50 transition"
@@ -267,7 +273,7 @@ export default function Home() {
             </div>
           )}
 
-          {selectedStopId && !isSearchMode && !timetableLoading && departures.map((departure, index) => {
+          {selectedStopId && !isSearchMode && !timetableLoading && departures.map((departure) => {
             const minutes = minutesUntilDeparture(
               departure.realtimeArrival,
               departure.serviceDay
@@ -275,7 +281,7 @@ export default function Home() {
 
             return (
               <div
-                key={index}
+                key={`${departure.serviceDay}-${departure.realtimeArrival}-${departure.trip.route.shortName}`}
                 className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm"
               >
                 <div className="flex items-center justify-between">

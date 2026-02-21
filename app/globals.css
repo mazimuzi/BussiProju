@@ -1,17 +1,10 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800&display=swap');
 @import "tailwindcss";
 
-
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #eef2f7;
+  --foreground: #0f172a;
 }
-
-/*@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}*/
 
 @media (prefers-color-scheme: dark) {
   :root {
@@ -20,8 +13,151 @@
   }
 }
 
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+aside {
+  background: #ffffff;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.07);
+  display: flex;
+  flex-direction: column;
+}
+
+aside header {
+  background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%);
+  margin: -1rem -1rem 1rem -1rem;
+  padding: 1.25rem 1rem 1rem;
+  border-radius: 0;
+  color: white;
+}
+
+aside header h1 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.2rem;
+}
+
+aside header h1::before {
+  content: "🚌 ";
+}
+
+aside header p {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+aside input[type="text"] {
+  background: #f1f5f9;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 0.875rem;
+  color: #1e293b;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+
+aside input[type="text"]::placeholder {
+  color: #94a3b8;
+}
+
+aside input[type="text"]:focus {
+  background: #ffffff;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  outline: none;
+}
+
+aside > button {
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.15s, transform 0.1s, box-shadow 0.15s;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.10);
+}
+
+aside > button:hover {
+  filter: brightness(1.08);
+  box-shadow: 0 3px 10px rgba(0,0,0,0.13);
+}
+
+aside > button:active {
+  transform: scale(0.98);
+}
+
+aside .overflow-y-auto {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+aside .overflow-y-auto::-webkit-scrollbar {
+  width: 4px;
+}
+
+aside .overflow-y-auto::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+aside .overflow-y-auto::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 99px;
+}
+
+aside .overflow-y-auto button {
+  border-radius: 14px;
+  border: 1.5px solid #e8edf5;
+  background: #ffffff;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+aside .overflow-y-auto button:hover {
+  background: #f0f6ff;
+  border-color: #bfdbfe;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+  transform: translateY(-1px);
+}
+
+aside .overflow-y-auto button:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+aside .overflow-y-auto > div {
+  border-radius: 14px;
+  border: 1.5px solid #e8edf5;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.15s;
+}
+
+aside .overflow-y-auto > div:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+aside .overflow-y-auto > div span.text-blue-600 {
+  background: #1d4ed8;
+  color: #fff;
+  padding: 0.15rem 0.55rem;
+  border-radius: 6px;
+  font-size: 1rem;
+}
+
+aside .bg-yellow-100 {
+  background: #fef9c3;
+  border: 1.5px solid #fde68a;
+  border-radius: 10px;
 }
