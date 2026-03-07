@@ -15,6 +15,7 @@ export default function Home() {
   const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
   const[searchQuery, setSearchQuery] = useState("");
   const [isSearchMode, setIsSearchMode] = useState(false);
+  const [highlightedRouteStopId, setHighlightedRouteStopId] = useState<string | null>(null);
   
   // "Virtuaalinen" sijainti - joko GPS tai haetun pysäkin sijainti
   const [virtualLocation, setVirtualLocation] = useState<{ lat: number; lon: number } | null>(null);
@@ -259,6 +260,8 @@ const handleCloseRoute = () => {
                   type="button"
                   key={stop.gtfsId}
                   onClick={() => handleStopClick(stop.gtfsId)}
+                  onMouseEnter={() => setHighlightedRouteStopId(stop.gtfsId)}
+    onMouseLeave={() => setHighlightedRouteStopId(null)}
                   className="w-full text-left rounded-xl border border-gray-200 bg-white p-3 shadow-sm hover:bg-orange-50 transition"
                 >
                   <div className="flex items-center gap-3">
@@ -395,6 +398,7 @@ const handleCloseRoute = () => {
             onStopClick={handleStopClick}
             selectedStopId={selectedStopId}
             routePattern={routePattern}
+            highlightedRouteStopId={highlightedRouteStopId}
           />
         </MapProvider>
       </main>

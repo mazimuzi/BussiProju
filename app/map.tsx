@@ -17,6 +17,7 @@ interface MapComponentProps {
     onStopClick?: (stopId: string) => void;
     selectedStopId?: string | null;
     routePattern?: RoutePattern | null;
+    highlightedRouteStopId?: string | null;
 }
 
 const defaultMapCenter = {
@@ -33,7 +34,8 @@ const MapComponent = ({
     userLocation,
     onStopClick,
     selectedStopId,
-    routePattern
+    routePattern,
+    highlightedRouteStopId
 }: MapComponentProps) => {
 
     // Käytä käyttäjän sijaintia kartan keskipisteenä jos saatavilla
@@ -75,7 +77,8 @@ const MapComponent = ({
                             longitude: stop.lon,
                             title: stop.name,
                             description: `Pysäkki ${index + 1}`,
-                            isRouteStop: true
+                            isRouteStop: true,
+                            isHighlighted: stop.gtfsId === highlightedRouteStopId
                         }}
                         onClick={() => onStopClick?.(stop.gtfsId)}
                     />
