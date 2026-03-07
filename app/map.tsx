@@ -6,8 +6,9 @@ we need to make this component client rendered as well else error occurs
 
 import { APIProvider, Map } from '@vis.gl/react-google-maps';
 import { AdvancedMarkerComponent } from './advanced-marker';
+import { RoutePolyline } from './route-polyline';
 import { useState, useEffect } from 'react';
-import { NearbyStop, getTransportModeEmoji } from '@/lib/digitransit';
+import { NearbyStop, RoutePattern, decodePolyline, getTransportModeEmoji } from '@/lib/digitransit';
 
 // Sample location data - replace with your actual data
 interface MapComponentProps {
@@ -15,6 +16,7 @@ interface MapComponentProps {
     userLocation?: { lat: number; lon: number } | null;
     onStopClick?: (stopId: string) => void;
     selectedStopId?: string | null;
+    routePattern?: RoutePattern | null;
 }
 
 const defaultMapCenter = {
@@ -30,13 +32,19 @@ const MapComponent = ({
     stops = [],
     userLocation,
     onStopClick,
-    selectedStopId
+    selectedStopId,
+    routePattern
 }: MapComponentProps) => {
 
     // Käytä käyttäjän sijaintia kartan keskipisteenä jos saatavilla
     const mapCenter = userLocation
         ? { lat: userLocation.lat, lng: userLocation.lon }
         : defaultMapCenter;
+
+    // Dekoodaa reitin polyline jos saatavilla
+    const routePath = routePattern?.patternGeometry?.points 
+        ? decodePolyline(routePattern.patternGeometry.points)
+        : null;
 
     return (
         <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY as string}>
@@ -48,8 +56,33 @@ const MapComponent = ({
                 mapId="DEMO_MAP_ID"
                 reuseMaps={true}
             >
+                {/* Reitin viiva */}
+                {routePath && (
+                    <RoutePolyline 
+                        path={routePath} 
+                        strokeColor={getRouteColor(routePattern?.route.mode)}
+                    />
+                )}
+
+                {/* Reitin pysäkit (jos reitti valittu) */}
+                {routePattern?.stops.map((stop, index) => (
+                    <AdvancedMarkerComponent
+                        key={`route-stop-${stop.gtfsId}`}
+                        index={index}
+                        location={{
+                            id: stop.gtfsId,
+                            latitude: stop.lat,
+                            longitude: stop.lon,
+                            title: stop.name,
+                            description: `Pysäkki ${index + 1}`,
+                            isRouteStop: true
+                        }}
+                        onClick={() => onStopClick?.(stop.gtfsId)}
+                    />
+                ))}
+
                 {/* Käyttäjän sijainti */}
-                {userLocation && (
+                {userLocation && !routePattern && (
                     <AdvancedMarkerComponent
                         key="user-location"
                         index={-1}
@@ -65,7 +98,7 @@ const MapComponent = ({
                 )}
 
                 {/* Pysäkit */}
-                {stops.map((nearbyStop, index) => {
+                {!routePattern && stops.map((nearbyStop, index) => {
                     const { stop } = nearbyStop;
                     if (!stop.lat || !stop.lon) return null;
 
@@ -90,5 +123,17 @@ const MapComponent = ({
         </APIProvider>
     )
 };
+
+// Väri kulkuvälineen mukaan
+function getRouteColor(mode?: string): string {
+    switch (mode) {
+        case 'BUS': return '#007AC9';
+        case 'TRAM': return '#00985F';
+        case 'RAIL': return '#8C4799';
+        case 'SUBWAY': return '#FF6319';
+        case 'FERRY': return '#00B9E4';
+        default: return '#007AC9';
+    }
+}
 
 export { MapComponent };

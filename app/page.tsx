@@ -7,8 +7,9 @@ import { useNearbyStops } from "@/lib/hooks";
 import { useStopTimetable } from "@/lib/hooks";
 import { useGeolocation } from "@/lib/hooks";
 import { useSearchStops } from "@/lib/hooks";
-import { minutesUntilDeparture, getCityFromGtfsId } from "@/lib/digitransit";
-import type { NearbyStop, Stop } from "@/lib/digitransit";
+import { useRoutePattern } from "@/lib/hooks";
+import { minutesUntilDeparture, getCityFromGtfsId, getModeInFinnish } from "@/lib/digitransit";
+import type { Departure, NearbyStop, Stop } from "@/lib/digitransit";
 
 export default function Home() {
   const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
@@ -34,6 +35,14 @@ export default function Home() {
     search,
     clear: clearSearch,
   } = useSearchStops();
+
+  // Reitin haku
+const {
+  pattern: routePattern,
+  loading: routeLoading,
+  fetchPattern,
+  clear: clearRoute,
+} = useRoutePattern();
 
   // Käytä virtuaalista sijaintia jos asetettu, muuten GPS
   const activeLocation = virtualLocation || gpsLocation;
@@ -89,6 +98,19 @@ export default function Home() {
     setSearchQuery("");
   };
 
+  // Näytä reitti kartalla
+const handleShowRoute = (departure: Departure) => {
+  const patternId = departure.trip.pattern.code;
+  if (patternId) {
+    fetchPattern(patternId);
+  }
+};
+
+// Sulje reittinäkymä
+const handleCloseRoute = () => {
+  clearRoute();
+};
+
   // Käsittele haku
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,7 +139,9 @@ export default function Home() {
         <header className="mb-4">
           <h1 className="text-xl font-semibold">Lähdöt läheltäsi</h1>
           <p className="text-sm text-gray-500">
-            {selectedStopId && stopName
+            { routePattern
+              ? routePattern.route.longName
+              : selectedStopId && stopName
               ? `Pysäkki: ${stopName}`
               : virtualLocation
               ? "Haettu sijainti"
@@ -128,6 +152,7 @@ export default function Home() {
         </header>
 
         {/* HAKUKENTTÄ */}
+        {!routePattern && (
         <form onSubmit={handleSearch} className="mb-4">
           <div className="relative">
             <input
@@ -152,16 +177,34 @@ export default function Home() {
             )}
           </div>
         </form>
-
+      )}
         {/* Sijaintivirhe */}
-        {locationError && !virtualLocation && (
+        {locationError && !virtualLocation && !routePattern && (
           <div className="mb-4 p-2 bg-yellow-100 border border-yellow-300 rounded-lg">
             <p className="text-sm text-yellow-800">{locationError}</p>
           </div>
         )}
 
+        {/* REITIN TIEDOT */}
+        {routePattern && (
+          <>
+            <button
+              type="button"
+              onClick={handleCloseRoute}
+              className="mb-4 rounded-lg bg-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-300 transition"
+            >
+              ← Sulje reittinäkymä
+            </button>
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <strong>{getModeInFinnish(routePattern.route.mode)}</strong> • {routePattern.stops.length} pysäkkiä
+              </p>
+            </div>
+          </>
+        )}
+
         {/* Palaa omaan sijaintiin -nappi */}
-        {virtualLocation && (
+        {virtualLocation && !routePattern && (
           <button
             type="button"
             onClick={handleReturnToMyLocation}
@@ -172,7 +215,7 @@ export default function Home() {
         )}
 
         {/* Takaisin-nappi kun pysäkki on valittu */}
-        {selectedStopId && !isSearchMode ? (
+        {selectedStopId && !isSearchMode && !routePattern ? (
           <button
             type="button"
             onClick={() => setSelectedStopId(null)}
@@ -180,7 +223,7 @@ export default function Home() {
           >
             ← Takaisin pysäkkilistaan
           </button>
-        ) : !isSearchMode && !virtualLocation && (
+        ) : !isSearchMode && !virtualLocation && !routePattern && (
           <button
             type="button"
             onClick={refetchLocation}
@@ -193,18 +236,42 @@ export default function Home() {
         {/* SISÄLTÖ */}
         <div className="flex-1 overflow-y-auto space-y-3">
           {/* Ladataan... */}
-          {(isLoading || searchLoading) && (
+          {(isLoading || searchLoading || routeLoading) && (
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
               <span className="ml-2 text-sm text-gray-500">
-                {searchLoading ? "Haetaan..." : locationLoading ? "Haetaan sijaintia..." : "Ladataan pysäkkejä..."}
+                {routeLoading ? "Ladataan reittiä..." : searchLoading ? "Haetaan..." : locationLoading ? "Haetaan sijaintia..." : "Ladataan pysäkkejä..."}
               </span>
             </div>
           )}
-
+ 
           {/* Hakuvirhe */}
           {searchError && (
             <p className="text-sm text-red-500">Virhe: {searchError}</p>
+          )}
+
+          {/* REITIN PYSÄKKILISTA */}
+          {routePattern && !routeLoading && (
+            <>
+              <p className="text-sm text-gray-500 font-medium">Reitin pysäkit:</p>
+              {routePattern.stops.map((stop, index) => (
+                <button
+                  type="button"
+                  key={stop.gtfsId}
+                  onClick={() => handleStopClick(stop.gtfsId)}
+                  className="w-full text-left rounded-xl border border-gray-200 bg-white p-3 shadow-sm hover:bg-orange-50 transition"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="flex-shrink-0 w-6 h-6 bg-orange-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                      {index + 1}
+                    </span>
+                    <span className="text-sm font-medium text-gray-800">
+                      {stop.name}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </>
           )}
 
           {/* HAKUTULOKSET */}
@@ -239,12 +306,12 @@ export default function Home() {
           )}
 
           {/* Virhe */}
-          {stopsError && !isSearchMode && (
+          {stopsError && !isSearchMode && !routePattern && (
             <p className="text-sm text-red-500">Virhe: {stopsError}</p>
           )}
 
           {/* PYSÄKKILISTA */}
-          {!selectedStopId && !isSearchMode && !isLoading && stops.map((nearbyStop: NearbyStop) => (
+          {!selectedStopId && !isSearchMode && !isLoading && !routePattern && stops.map((nearbyStop: NearbyStop) => (
             <button
               type="button"
               key={nearbyStop.stop.gtfsId}
@@ -266,14 +333,14 @@ export default function Home() {
           ))}
 
           {/* AIKATAULU */}
-          {selectedStopId && !isSearchMode && timetableLoading && (
+          {selectedStopId && !isSearchMode && !routePattern && !timetableLoading && (
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
               <span className="ml-2 text-sm text-gray-500">Ladataan aikataulua...</span>
             </div>
           )}
 
-          {selectedStopId && !isSearchMode && !timetableLoading && departures.map((departure) => {
+          {selectedStopId && !isSearchMode && !routePattern && !timetableLoading && departures.map((departure) => {
             const minutes = minutesUntilDeparture(
               departure.realtimeArrival,
               departure.serviceDay
@@ -296,17 +363,24 @@ export default function Home() {
                 {departure.realtime && (
                   <span className="text-xs text-green-600">● Reaaliaikainen</span>
                 )}
+                <button
+                    type="button"
+                    onClick={() => handleShowRoute(departure)}
+                    className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
+                  >
+                    Näytä reitti →
+                  </button>
               </div>
             );
           })}
 
           {/* Ei lähtöjä */}
-          {selectedStopId && !isSearchMode && !timetableLoading && departures.length === 0 && (
+          {selectedStopId && !isSearchMode && !routePattern && !timetableLoading && departures.length === 0 && (
             <p className="text-sm text-gray-500">Ei tulevia lähtöjä</p>
           )}
 
           {/* Ei pysäkkejä */}
-          {!selectedStopId && !isSearchMode && !isLoading && stops.length === 0 && (
+          {!selectedStopId && !isSearchMode && !isLoading && !routePattern && stops.length === 0 && (
             <p className="text-sm text-gray-500">Ei pysäkkejä lähellä (500m säteellä)</p>
           )}
         </div>
@@ -320,6 +394,7 @@ export default function Home() {
             userLocation={activeLocation}
             onStopClick={handleStopClick}
             selectedStopId={selectedStopId}
+            routePattern={routePattern}
           />
         </MapProvider>
       </main>

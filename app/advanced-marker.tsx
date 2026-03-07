@@ -12,6 +12,7 @@ interface Location {
     description?: string;
     isUserLocation?: boolean;
     isSelected?: boolean;
+    isRouteStop?: boolean;
     vehicleMode?: string;
     transportEmoji?: string;
 }
@@ -27,18 +28,23 @@ export function AdvancedMarkerComponent({ location, index, onClick }:
     const [infoWindowOpen, setInfoWindowOpen] = useState(false);
     const [hovered, setHovered] = useState(false);
 
-    //Värit: vihreä = käyttäjä, punainen = valittu, sininen = normaali
+    //Värit: vihreä = käyttäjä, punainen = valittu, sininen = normaali, oranssi = reitin pysäkki,
     let background = "#3366FF";
     if (location.isUserLocation) {
         background = "#34A853";
     } else if (location.isSelected) {
         background = "#EA4335";
+    } else if (location.isRouteStop) {
+        background = "#FF9800";
     }
 
     const handleClick = () => {
         setInfoWindowOpen(true);
         onClick?.();
     };
+
+    // Scale riippuu tyypistä
+    const scale = hovered ? 1.2 : 1;
 
     return (
         <AdvancedMarker
@@ -52,8 +58,9 @@ export function AdvancedMarkerComponent({ location, index, onClick }:
                 background={background}
                 scale={hovered ? 1.15 : 1}
                 borderColor="white"
-                glyph={location.isUserLocation ? "📍" : location.transportEmoji || "📍"}
+                glyph={location.isUserLocation ? "📍" : location.isRouteStop ? "" : location.transportEmoji || "📍"}
                 glyphColor="white"
+                isDot={location.isRouteStop}
             />
 
             {infoWindowOpen && (

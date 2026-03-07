@@ -9,11 +9,29 @@ interface PinProps {
     glyph?: string | URL;
     glyphColor?: string;
     size?: number;
+    isDot?: boolean;
 }
 
-export function Pin({ background = '#3366FF', scale = 1, borderColor = 'white', glyph, glyphColor = 'white', size = 40 }: PinProps) {
+export function Pin({ background = '#3366FF', scale = 1, borderColor = 'white', glyph, glyphColor = 'white', size = 40, isDot = false }: PinProps) {
     const isImage = typeof glyph === 'string' && (glyph.startsWith('http') || glyph.startsWith('/'));
     const glyphUrl = isImage && typeof glyph === 'string' ? glyph : glyph instanceof URL ? glyph.href : undefined;
+
+    // Pieni piste reitin pysäkeille
+    if (isDot) {
+        const dotStyle: React.CSSProperties = {
+            width: 12,
+            height: 12,
+            borderRadius: '50%',
+            background,
+            border: `2px solid ${borderColor}`,
+            boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+            transform: `scale(${scale})`,
+            transition: 'transform 150ms ease',
+            cursor: 'pointer',
+        };
+
+        return <div style={dotStyle} aria-hidden />;
+    }
 
     const wrapperStyle: React.CSSProperties = {
         display: 'inline-flex',
