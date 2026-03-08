@@ -1,7 +1,3 @@
-/* 
-Since the map was loaded on client side, 
-we need to make this component client rendered as well else error occurs
-*/
 'use client'
 
 import { APIProvider, Map } from '@vis.gl/react-google-maps';
@@ -10,7 +6,6 @@ import { RoutePolyline } from './route-polyline';
 import { useState, useEffect } from 'react';
 import { NearbyStop, RoutePattern, decodePolyline, getTransportModeEmoji } from '@/lib/digitransit';
 
-// Sample location data - replace with your actual data
 interface MapComponentProps {
     stops?: NearbyStop[];
     userLocation?: { lat: number; lon: number } | null;
@@ -27,8 +22,6 @@ const defaultMapCenter = {
 
 const defaultMapZoom = 13;
 
-
-
 const MapComponent = ({
     stops = [],
     userLocation,
@@ -43,10 +36,26 @@ const MapComponent = ({
     // update center for the initial load or whenever location changes, but
     // only pan the already‑initialized map; this keeps dragging unlocked.
     useEffect(() => {
-        if (mapInstance && userLocation) {
+        if (mapInstance && userLocation && !routePattern) {
             mapInstance.panTo({ lat: userLocation.lat, lng: userLocation.lon });
         }
-    }, [mapInstance, userLocation]);
+    }, [mapInstance, userLocation, routePattern]);
+
+    // Zoomaa automaattisesti näyttämään koko reitti
+    useEffect(() => {
+        if (mapInstance && routePattern && routePattern.stops.length > 0) {
+            const bounds = new google.maps.LatLngBounds();
+            
+            routePattern.stops.forEach((stop) => {
+                bounds.extend({ lat: stop.lat, lng: stop.lon });
+            });
+            
+            // Pieni viive jotta kartta ehtii renderöityä
+            setTimeout(() => {
+                mapInstance.fitBounds(bounds, { top: 50, right: 50, bottom: 50, left: 50 });
+            }, 100);
+        }
+    }, [mapInstance, routePattern]);
 
     // Käytä käyttäjän sijaintia kartan keskipisteenä jos saatavilla
     const mapCenter = userLocation
@@ -61,12 +70,9 @@ const MapComponent = ({
     return (
         <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY as string}>
             <Map
-                // start the map at the user's location (or default) but don't
-                // force the center on every render – removing the `center` prop
-                // makes the map uncontrolled and lets the user pan freely.
                 defaultCenter={mapCenter}
                 defaultZoom={defaultMapZoom}
-                className="w-full h-screen"
+                className="w-full h-full"
                 mapId="DEMO_MAP_ID"
                 reuseMaps={true}
                 onIdle={e => {
@@ -143,7 +149,6 @@ const MapComponent = ({
     )
 };
 
-// Väri kulkuvälineen mukaan
 function getRouteColor(mode?: string): string {
     switch (mode) {
         case 'BUS': return '#007AC9';
