@@ -24,7 +24,7 @@ interface UseStopTimetableResult {
 
 export function useStopTimetable({
   stopId,
-  numberOfDepartures = 10,
+  numberOfDepartures = 50,
   refreshInterval = 30000,
 }: UseStopTimetableOptions): UseStopTimetableResult {
   const [stopName, setStopName] = useState<string | null>(null);

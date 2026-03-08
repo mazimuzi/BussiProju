@@ -93,13 +93,44 @@ export const STOP_TIMETABLE_QUERY = `
         realtime
         serviceDay
         trip {
+          gtfsId
+          pattern {
+            code
+          }
           route {
+            gtfsId
             shortName
             longName
             mode
           }
         }
         headsign
+      }
+    }
+  }
+`;
+
+// Hae reitin geometria (polyline) ja pysäkit
+export const ROUTE_PATTERN_QUERY = `
+  query RoutePattern($patternId: String!) {
+    pattern(id: $patternId) {
+      code
+      name
+      directionId
+      route {
+        gtfsId
+        shortName
+        longName
+        mode
+      }
+      patternGeometry {
+        points
+      }
+      stops {
+        gtfsId
+        name
+        lat
+        lon
       }
     }
   }
@@ -145,7 +176,12 @@ export interface Departure {
   realtime: boolean;
   serviceDay: number;
   trip: {
+    gtfsId: string;
+    pattern: {
+      code: string;
+    };
     route: {
+      gtfsId: string;
       shortName: string;
       longName: string;
       mode: string;
@@ -164,6 +200,26 @@ export interface StopTimetableResponse {
   };
 }
 
+export interface RoutePattern {
+  code: string;
+  name: string;
+  directionId: number;
+  route: {
+    gtfsId: string;
+    shortName: string;
+    longName: string;
+    mode: string;
+  };
+  patternGeometry: {
+    points: string; // Encoded polyline
+  };
+  stops: Stop[];
+}
+
+export interface RoutePatternResponse {
+  pattern: RoutePattern;
+}
+
 // ============================================
 // APUFUNKTIOT
 // ============================================
@@ -174,6 +230,21 @@ export function formatTime(secondsFromMidnight: number, serviceDay: number): str
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+export function formatMinutes(minutes: number): string {
+  if (minutes <= 0) return "Nyt!";
+  if (minutes < 60) return `${minutes} min`;
+  
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+
+  if (hours >= 12) {
+    return "huomenna";
+  }
+  
+  if (mins === 0) return `${hours} h`;
+  return `${hours} h ${mins} min`;
 }
 
 export function minutesUntilDeparture(realtimeArrival: number, serviceDay: number): number {
@@ -231,4 +302,46 @@ export function getCityFromGtfsId(gtfsId: string): string {
     "matkahuolto": "Matkahuolto",
   };
   return cities[prefix] || prefix;
+}
+
+// Dekoodaa Google Encoded Polyline -> koordinaatit
+export function decodePolyline(encoded: string): Array<{ lat: number; lng: number }> {
+  const points: Array<{ lat: number; lng: number }> = [];
+  let index = 0;
+  let lat = 0;
+  let lng = 0;
+
+  while (index < encoded.length) {
+    let shift = 0;
+    let result = 0;
+    let byte: number;
+
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+
+    const dlat = result & 1 ? ~(result >> 1) : result >> 1;
+    lat += dlat;
+
+    shift = 0;
+    result = 0;
+
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+
+    const dlng = result & 1 ? ~(result >> 1) : result >> 1;
+    lng += dlng;
+
+    points.push({
+      lat: lat / 1e5,
+      lng: lng / 1e5,
+    });
+  }
+
+  return points;
 }
