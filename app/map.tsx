@@ -32,6 +32,16 @@ const MapComponent = ({
     onStopClick,
     selectedStopId
 }: MapComponentProps) => {
+    // hold onto the map instance so we can pan when location updates
+    const [mapInstance, setMapInstance] = useState<google.maps.Map | null>(null);
+
+    // update center for the initial load or whenever location changes, but
+    // only pan the already‑initialized map; this keeps dragging unlocked.
+    useEffect(() => {
+        if (mapInstance && userLocation) {
+            mapInstance.panTo({ lat: userLocation.lat, lng: userLocation.lon });
+        }
+    }, [mapInstance, userLocation]);
 
     // Käytä käyttäjän sijaintia kartan keskipisteenä jos saatavilla
     const mapCenter = userLocation
@@ -41,12 +51,18 @@ const MapComponent = ({
     return (
         <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY as string}>
             <Map
+                // start the map at the user's location (or default) but don't
+                // force the center on every render – removing the `center` prop
+                // makes the map uncontrolled and lets the user pan freely.
                 defaultCenter={mapCenter}
-                center={mapCenter}
                 defaultZoom={defaultMapZoom}
                 className="w-full h-screen"
                 mapId="DEMO_MAP_ID"
                 reuseMaps={true}
+                onIdle={e => {
+                    // capture map reference once it's ready
+                    if (!mapInstance) setMapInstance(e.map);
+                }}
             >
                 {/* Käyttäjän sijainti */}
                 {userLocation && (
