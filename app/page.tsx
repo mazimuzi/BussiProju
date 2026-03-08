@@ -154,9 +154,9 @@ const handleCloseRoute = () => {
   };
 
   return (
-    <div className="flex h-screen flex-col md:flex-row bg-background text-foreground">
+    <div className="flex h-[100dvh] flex-col md:flex-row bg-background text-foreground overflow-hidden">
       {/* SIDEBAR */}
-      <aside className="md:w-80 w-full md:h-full h-72 border-r md:border-r md:border-b-0 border-b bg-white/80 backdrop-blur-sm shadow-sm p-4 flex flex-col">
+      <aside className={`md:w-96 w-full md:h-full md:shrink-0 border-r md:border-b-0 border-b bg-white shadow-sm p-4 flex flex-col overflow-hidden ${selectedStopId && !routePattern ? 'flex-1' : 'h-[50vh]'}`}>
         <header className="mb-4">
           <h1 className="text-xl font-semibold">Lähdöt läheltäsi</h1>
           <p className="text-sm text-gray-500">
@@ -482,7 +482,7 @@ const handleCloseRoute = () => {
       </aside>
 
       {/* KARTTA-ALUE */}
-      <main className="flex-1 relative">
+      <main className={`flex-1 md:h-full relative ${selectedStopId && !routePattern ? 'hidden md:block' : 'h-[50vh]'}`}>
         <MapProvider>
           <MapComponent 
             stops={stops}
