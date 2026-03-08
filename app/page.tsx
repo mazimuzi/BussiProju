@@ -8,7 +8,7 @@ import { useStopTimetable } from "@/lib/hooks";
 import { useGeolocation } from "@/lib/hooks";
 import { useSearchStops } from "@/lib/hooks";
 import { useRoutePattern } from "@/lib/hooks";
-import { minutesUntilDeparture, getCityFromGtfsId, getModeInFinnish } from "@/lib/digitransit";
+import { minutesUntilDeparture, getCityFromGtfsId, getModeInFinnish, formatTime, formatMinutes } from "@/lib/digitransit";
 import type { Departure, NearbyStop, Stop } from "@/lib/digitransit";
 
 export default function Home() {
@@ -16,6 +16,7 @@ export default function Home() {
   const[searchQuery, setSearchQuery] = useState("");
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [highlightedRouteStopId, setHighlightedRouteStopId] = useState<string | null>(null);
+  const [selectedRoute, setSelectedRoute] = useState<string| null>(null);
   
   // "Virtuaalinen" sijainti - joko GPS tai haetun pysäkin sijainti
   const [virtualLocation, setVirtualLocation] = useState<{ lat: number; lon: number } | null>(null);
@@ -67,11 +68,30 @@ const {
     loading: timetableLoading,
   } = useStopTimetable({
     stopId: selectedStopId,
-    numberOfDepartures: 5,
+    numberOfDepartures: 50,
     refreshInterval: 30000,
   });
 
   const isLoading = locationLoading || stopsLoading;
+
+  // Ryhmittele lähdöt linjan mukaan
+  const departuresByRoute = departures.reduce((acc, dep) => {
+    const routeName = dep.trip.route.shortName;
+    if (!acc[routeName]) {
+      acc[routeName] = [];
+    }
+    acc[routeName].push(dep);
+    return acc;
+  }, {} as Record<string, Departure[]>);
+
+  // Lajittele linjat seuraavan lähdön mukaan
+  const sortedRoutes = Object.keys(departuresByRoute).sort((a, b) => {
+    const aNext = departuresByRoute[a][0];
+    const bNext = departuresByRoute[b][0];
+    const aTime = aNext.serviceDay + aNext.realtimeArrival;
+    const bTime = bNext.serviceDay + bNext.realtimeArrival;
+    return aTime - bTime;
+  });
 
   // Käsittele pysäkin klikkaus
   const handleStopClick = (stopId: string) => {
@@ -202,6 +222,17 @@ const handleCloseRoute = () => {
               </p>
             </div>
           </>
+        )}
+
+        {/* LINJAN AIKATAULU -Takaisin nappi*/}
+        {selectedRoute && !routePattern && (
+          <button
+            type="button"
+            onClick={() => setSelectedRoute(null)}
+            className="mb-4 rounded-lg bg-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-300 transition"
+          >
+            ← Takaisin linjoihin
+          </button>
         )}
 
         {/* Palaa omaan sijaintiin -nappi */}
@@ -335,47 +366,108 @@ const handleCloseRoute = () => {
             </button>
           ))}
 
-          {/* AIKATAULU */}
-          {selectedStopId && !isSearchMode && !routePattern && !timetableLoading && (
+           {/* AIKATAULU - Ladataan */}
+          {selectedStopId && !isSearchMode && !routePattern && timetableLoading && (
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
               <span className="ml-2 text-sm text-gray-500">Ladataan aikataulua...</span>
             </div>
           )}
 
-          {selectedStopId && !isSearchMode && !routePattern && !timetableLoading && departures.map((departure) => {
-            const minutes = minutesUntilDeparture(
-              departure.realtimeArrival,
-              departure.serviceDay
-            );
+          {/* LINJALISTA - Näytä linjat (ei yksittäisen linjan aikataulu) */}
+          {selectedStopId && !isSearchMode && !routePattern && !timetableLoading && !selectedRoute && sortedRoutes.length > 0 && (
+            <>
+              <p className="text-sm text-gray-500 font-medium">Valitse linja nähdäksesi aikataulut:</p>
+              {sortedRoutes.map((routeName) => {
+                const routeDepartures = departuresByRoute[routeName];
+                const nextDeparture = routeDepartures[0];
+                const minutes = minutesUntilDeparture(
+                  nextDeparture.realtimeArrival,
+                  nextDeparture.serviceDay
+                );
 
-            return (
-              <div
-                key={`${departure.serviceDay}-${departure.realtimeArrival}-${departure.trip.route.shortName}`}
-                className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-lg font-bold text-blue-600">
-                    {departure.trip.route.shortName}
-                  </span>
-                  <span className={`text-sm font-semibold ${minutes <= 2 ? "text-red-600" : "text-gray-700"}`}>
-                    {minutes <= 0 ? "Nyt!" : `${minutes} min`}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-500">{departure.headsign}</p>
-                {departure.realtime && (
-                  <span className="text-xs text-green-600">● Reaaliaikainen</span>
-                )}
-                <button
+                return (
+                  <button
                     type="button"
-                    onClick={() => handleShowRoute(departure)}
-                    className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
+                    key={routeName}
+                    onClick={() => setSelectedRoute(routeName)}
+                    className="w-full text-left rounded-xl border border-gray-200 bg-white p-3 shadow-sm hover:bg-blue-50 transition"
                   >
-                    Näytä reitti →
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg font-bold text-white bg-blue-600 px-2.5 py-0.5 rounded-lg min-w-[40px] text-center">
+                          {routeName}
+                        </span>
+                        <span className="text-sm text-gray-600">
+                          {nextDeparture.headsign}
+                        </span>
+                      </div>
+                      <span className={`text-sm font-semibold ${minutes <= 2 ? "text-red-600" : "text-gray-700"}`}>
+                        {formatMinutes(minutes)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="text-xs text-gray-500">
+                        {routeDepartures.length} lähtöä tänään
+                      </span>
+                      {nextDeparture.realtime && (
+                        <span className="text-xs text-green-600">● Reaaliaikainen</span>
+                      )}
+                    </div>
                   </button>
-              </div>
-            );
-          })}
+                );
+              })}
+            </>
+          )}
+
+          {/* VALITUN LINJAN KAIKKI AIKATAULUT */}
+          {selectedStopId && !isSearchMode && !routePattern && !timetableLoading && selectedRoute && departuresByRoute[selectedRoute] && (
+            <>
+              <p className="text-sm text-gray-500 font-medium">
+                Linjan {selectedRoute} lähdöt ({departuresByRoute[selectedRoute].length} kpl):
+              </p>
+              {departuresByRoute[selectedRoute].map((departure, index) => {
+                const minutes = minutesUntilDeparture(
+                  departure.realtimeArrival,
+                  departure.serviceDay
+                );
+                const departureTime = formatTime(departure.realtimeArrival, departure.serviceDay);
+
+                return (
+                  <div
+                    key={`${departure.serviceDay}-${departure.realtimeArrival}-${index}`}
+                    className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg font-bold text-white bg-blue-600 px-2.5 py-0.5 rounded-lg">
+                          {selectedRoute}
+                        </span>
+                        <span className="text-sm text-gray-600">
+                          {departureTime} → {departure.headsign}
+                        </span>
+                      </div>
+                      <span className={`text-sm font-semibold ${minutes <= 2 ? "text-red-600" : minutes <= 10 ? "text-orange-600" : "text-gray-700"}`}>
+                        {formatMinutes(minutes)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between mt-2">
+                      {departure.realtime && (
+                        <span className="text-xs text-green-600">● Reaaliaikainen</span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleShowRoute(departure)}
+                        className="text-xs text-blue-600 hover:text-blue-800 hover:underline ml-auto"
+                      >
+                        Näytä pysäkit →
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </>
+          )}
 
           {/* Ei lähtöjä */}
           {selectedStopId && !isSearchMode && !routePattern && !timetableLoading && departures.length === 0 && (

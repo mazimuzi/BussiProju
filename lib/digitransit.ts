@@ -232,6 +232,21 @@ export function formatTime(secondsFromMidnight: number, serviceDay: number): str
   });
 }
 
+export function formatMinutes(minutes: number): string {
+  if (minutes <= 0) return "Nyt!";
+  if (minutes < 60) return `${minutes} min`;
+  
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+
+  if (hours >= 12) {
+    return "huomenna";
+  }
+  
+  if (mins === 0) return `${hours} h`;
+  return `${hours} h ${mins} min`;
+}
+
 export function minutesUntilDeparture(realtimeArrival: number, serviceDay: number): number {
   const departureTime = (serviceDay + realtimeArrival) * 1000;
   const now = Date.now();
